@@ -6,15 +6,20 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
 	"time"
 
 	"github.com/Jwrede/llmprobe/internal/config"
 	"github.com/Jwrede/llmprobe/internal/output"
 	"github.com/Jwrede/llmprobe/internal/probe"
+	"github.com/Jwrede/llmprobe/internal/tui"
 	"github.com/spf13/cobra"
 )
 
-var watchInterval time.Duration
+var (
+	watchInterval time.Duration
+	useTUI        bool
+)
 
 var watchCmd = &cobra.Command{
 	Use:   "watch",
@@ -24,6 +29,7 @@ var watchCmd = &cobra.Command{
 
 func init() {
 	watchCmd.Flags().DurationVar(&watchInterval, "interval", 60*time.Second, "probe interval (e.g. 30s, 5m)")
+	watchCmd.Flags().BoolVar(&useTUI, "tui", false, "show live terminal dashboard")
 	rootCmd.AddCommand(watchCmd)
 }
 
@@ -34,6 +40,10 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	}
 
 	engine := probe.NewEngine(cfg)
+
+	if useTUI {
+		return runWatchTUI(engine)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -54,6 +64,39 @@ func runWatch(cmd *cobra.Command, args []string) error {
 			runIteration(engine)
 		}
 	}
+}
+
+func runWatchTUI(engine *probe.Engine) error {
+	dash, err := tui.New()
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		ticker := time.NewTicker(watchInterval)
+		defer ticker.Stop()
+
+		results, err := engine.RunAll()
+		if err == nil {
+			dash.Update(results)
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				results, err := engine.RunAll()
+				if err == nil {
+					dash.Update(results)
+				}
+			}
+		}
+	}()
+
+	return dash.Run(ctx, cancel)
 }
 
 func runIteration(engine *probe.Engine) {

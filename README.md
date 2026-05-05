@@ -98,6 +98,7 @@ summary line per iteration.
 ```bash
 llmprobe watch                          # default 60s interval
 llmprobe watch --interval 30s           # custom interval
+llmprobe watch --tui                    # live terminal dashboard with TTFT chart
 llmprobe watch -f json                  # JSONL output (one line per result)
 ```
 
