@@ -11,3 +11,4 @@ vendor/
 demo/mockserver
 demo/*.cast
 demo/*.svg
+demo/llmprobe
