@@ -1,3 +1,5 @@
+![llmprobe](demo/tui-thumbnail.png?v=2)
+
 # llmprobe
 
 > Probe LLM API endpoints. Measure TTFT, latency, throughput. Single binary, zero SDKs.
@@ -12,8 +14,6 @@ latency, generation throughput (tokens/sec), and error rates.
 
 Use it as a one-off health check, a continuous monitor, or a CI gate that
 blocks deploys when your LLM provider is degraded.
-
-![llmprobe](demo/tui-thumbnail.png?v=2)
 
 ![demo](demo/llmprobe-demo.gif)
 
@@ -108,6 +108,8 @@ llmprobe watch -f json                  # JSONL output (one line per result)
 The `--tui` flag launches a live terminal dashboard with a TTFT chart,
 color legend, and statistics table. Use `--load` to import historical
 JSONL data (from `llmprobe watch -f json > data.jsonl`).
+
+![llmprobe](demo/tui-screenshot.png?v=2)
 
 ```
 $ llmprobe watch --interval 30s
