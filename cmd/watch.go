@@ -19,6 +19,7 @@ import (
 var (
 	watchInterval time.Duration
 	useTUI        bool
+	loadPath      string
 )
 
 var watchCmd = &cobra.Command{
@@ -30,6 +31,7 @@ var watchCmd = &cobra.Command{
 func init() {
 	watchCmd.Flags().DurationVar(&watchInterval, "interval", 60*time.Second, "probe interval (e.g. 30s, 5m)")
 	watchCmd.Flags().BoolVar(&useTUI, "tui", false, "show live terminal dashboard")
+	watchCmd.Flags().StringVar(&loadPath, "load", "", "load historical JSONL data into the dashboard")
 	rootCmd.AddCommand(watchCmd)
 }
 
@@ -70,6 +72,12 @@ func runWatchTUI(engine *probe.Engine) error {
 	dash, err := tui.New()
 	if err != nil {
 		return err
+	}
+
+	if loadPath != "" {
+		if err := dash.LoadJSONL(loadPath); err != nil {
+			return fmt.Errorf("loading %s: %w", loadPath, err)
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

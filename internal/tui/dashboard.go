@@ -1,8 +1,11 @@
 package tui
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -10,8 +13,8 @@ import (
 	"github.com/mum4k/termdash"
 	"github.com/mum4k/termdash/cell"
 	"github.com/mum4k/termdash/container"
-	"github.com/mum4k/termdash/linestyle"
 	"github.com/mum4k/termdash/keyboard"
+	"github.com/mum4k/termdash/linestyle"
 	"github.com/mum4k/termdash/terminal/tcell"
 	"github.com/mum4k/termdash/terminal/terminalapi"
 	"github.com/mum4k/termdash/widgets/linechart"
@@ -76,6 +79,64 @@ func New() (*Dashboard, error) {
 	}, nil
 }
 
+type jsonRecord struct {
+	Provider     string  `json:"provider"`
+	Model        string  `json:"model"`
+	Status       string  `json:"status"`
+	TTFTMs       int     `json:"ttft_ms"`
+	LatencyMs    int     `json:"latency_ms"`
+	TokensPerSec float64 `json:"tokens_per_sec"`
+	TokenCount   int     `json:"token_count"`
+}
+
+func (d *Dashboard) LoadJSONL(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
+	loaded := 0
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 || line[0] != '{' {
+			continue
+		}
+		var rec jsonRecord
+		if err := json.Unmarshal(line, &rec); err != nil {
+			continue
+		}
+
+		key := rec.Provider + "/" + rec.Model
+		h, ok := d.history[key]
+		if !ok {
+			h = &modelHistory{}
+			d.history[key] = h
+			d.order = append(d.order, key)
+		}
+
+		if rec.Status == "error" {
+			h.errors++
+			continue
+		}
+
+		h.ttft = append(h.ttft, float64(rec.TTFTMs))
+		h.latency = append(h.latency, float64(rec.LatencyMs))
+		h.tps = append(h.tps, rec.TokensPerSec)
+		h.tokens = append(h.tokens, rec.TokenCount)
+		loaded++
+	}
+
+	sort.Strings(d.order)
+	d.redraw()
+	return scanner.Err()
+}
+
 func (d *Dashboard) Update(results []probe.Result) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -106,6 +167,29 @@ func (d *Dashboard) Update(results []probe.Result) {
 	d.redraw()
 }
 
+const maxChartPoints = 200
+
+func downsample(vals []float64, maxPoints int) []float64 {
+	if len(vals) <= maxPoints {
+		return vals
+	}
+	bucketSize := len(vals) / maxPoints
+	out := make([]float64, 0, maxPoints)
+	for i := 0; i < len(vals); i += bucketSize {
+		end := i + bucketSize
+		if end > len(vals) {
+			end = len(vals)
+		}
+		bucket := vals[i:end]
+		sum := 0.0
+		for _, v := range bucket {
+			sum += v
+		}
+		out = append(out, sum/float64(len(bucket)))
+	}
+	return out
+}
+
 func (d *Dashboard) redraw() {
 	for i, key := range d.order {
 		h := d.history[key]
@@ -113,7 +197,7 @@ func (d *Dashboard) redraw() {
 			continue
 		}
 		color := modelColors[i%len(modelColors)]
-		d.chart.Series(key, h.ttft,
+		d.chart.Series(key, downsample(h.ttft, maxChartPoints),
 			linechart.SeriesCellOpts(cell.FgColor(color)),
 		)
 	}
