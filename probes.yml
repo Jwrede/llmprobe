@@ -1,0 +1,43 @@
+# llmprobe example configuration
+#
+# API keys are read from environment variables.
+# Set them before running: export OPENAI_API_KEY=sk-...
+
+defaults:
+  prompt: "Respond with exactly one sentence about the weather."
+  max_tokens: 50
+  timeout: 30s
+  concurrency: 3
+
+providers:
+  - name: openai
+    api_key: ${OPENAI_API_KEY}
+    models:
+      - name: gpt-4o
+        thresholds:
+          max_ttft: 2s
+          max_latency: 10s
+          min_tokens_per_sec: 20
+      - name: gpt-4o-mini
+        thresholds:
+          max_ttft: 500ms
+          max_latency: 5s
+          min_tokens_per_sec: 40
+
+  - name: anthropic
+    api_key: ${ANTHROPIC_API_KEY}
+    models:
+      - name: claude-sonnet-4-20250514
+        thresholds:
+          max_ttft: 1s
+          max_latency: 8s
+          min_tokens_per_sec: 25
+
+  - name: google
+    api_key: ${GEMINI_API_KEY}
+    models:
+      - name: gemini-2.0-flash
+        thresholds:
+          max_ttft: 500ms
+          max_latency: 5s
+          min_tokens_per_sec: 40
