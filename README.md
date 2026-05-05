@@ -13,6 +13,8 @@ latency, generation throughput (tokens/sec), and error rates.
 Use it as a one-off health check, a continuous monitor, or a CI gate that
 blocks deploys when your LLM provider is degraded.
 
+[![demo](https://asciinema.org/a/2hgAi83E78KIXoox.svg)](https://asciinema.org/a/2hgAi83E78KIXoox)
+
 ## Quick start
 
 ```bash

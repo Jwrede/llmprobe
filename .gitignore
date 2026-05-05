@@ -8,3 +8,6 @@ vendor/
 *.swo
 *~
 .DS_Store
+demo/mockserver
+demo/*.cast
+demo/*.svg
