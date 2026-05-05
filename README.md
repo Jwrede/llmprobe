@@ -99,8 +99,15 @@ summary line per iteration.
 llmprobe watch                          # default 60s interval
 llmprobe watch --interval 30s           # custom interval
 llmprobe watch --tui                    # live terminal dashboard with TTFT chart
+llmprobe watch --tui --load data.jsonl  # load historical data into the dashboard
 llmprobe watch -f json                  # JSONL output (one line per result)
 ```
+
+The `--tui` flag launches a live terminal dashboard with a TTFT chart,
+color legend, and statistics table. Use `--load` to import historical
+JSONL data (from `llmprobe watch -f json > data.jsonl`).
+
+![tui](demo/tui-screenshot.png)
 
 ```
 $ llmprobe watch --interval 30s

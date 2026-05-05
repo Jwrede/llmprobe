@@ -12,3 +12,8 @@ demo/mockserver
 demo/*.cast
 demo/*.svg
 demo/llmprobe
+demo/tui-capture.txt
+benchmark-data.jsonl
+benchmark-7d.jsonl
+benchmark.yml
+benchmark.pid

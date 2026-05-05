@@ -24,14 +24,14 @@ import (
 )
 
 var modelColors = []cell.Color{
-	cell.ColorNumber(196),
-	cell.ColorNumber(46),
-	cell.ColorNumber(33),
-	cell.ColorNumber(226),
-	cell.ColorNumber(201),
+	cell.ColorRed,
+	cell.ColorGreen,
+	cell.ColorBlue,
+	cell.ColorYellow,
+	cell.ColorMagenta,
+	cell.ColorCyan,
+	cell.ColorWhite,
 	cell.ColorNumber(208),
-	cell.ColorNumber(51),
-	cell.ColorNumber(15),
 }
 
 type modelHistory struct {
@@ -49,6 +49,7 @@ type Dashboard struct {
 	order   []string
 	chart   *linechart.LineChart
 	stats   *text.Text
+	legend  *text.Text
 	title   *text.Text
 }
 
@@ -66,6 +67,11 @@ func New() (*Dashboard, error) {
 		return nil, err
 	}
 
+	legend, err := text.New()
+	if err != nil {
+		return nil, err
+	}
+
 	title, err := text.New()
 	if err != nil {
 		return nil, err
@@ -75,6 +81,7 @@ func New() (*Dashboard, error) {
 		history: make(map[string]*modelHistory),
 		chart:   chart,
 		stats:   stats,
+		legend:  legend,
 		title:   title,
 	}, nil
 }
@@ -202,6 +209,13 @@ func (d *Dashboard) redraw() {
 		)
 	}
 
+	d.legend.Reset()
+	for i, key := range d.order {
+		color := modelColors[i%len(modelColors)]
+		d.legend.Write("  ━━ ", text.WriteCellOpts(cell.FgColor(color)))
+		d.legend.Write(fmt.Sprintf("%-30s", key), text.WriteCellOpts(cell.FgColor(color)))
+	}
+
 	d.stats.Reset()
 	d.stats.Write(fmt.Sprintf("  %-38s %8s %8s %8s %8s %5s %5s\n",
 		"Model", "TTFT", "p95", "Lat", "Tok/s", "Err", "N"),
@@ -279,9 +293,17 @@ func (d *Dashboard) Run(ctx context.Context, cancel context.CancelFunc) error {
 						container.PlaceWidget(d.chart),
 					),
 					container.Bottom(
-						container.PlaceWidget(d.title),
+						container.SplitHorizontal(
+							container.Top(
+								container.PlaceWidget(d.legend),
+							),
+							container.Bottom(
+								container.PlaceWidget(d.title),
+							),
+							container.SplitPercent(60),
+						),
 					),
-					container.SplitPercent(95),
+					container.SplitPercent(88),
 				),
 			),
 			container.Bottom(
