@@ -65,12 +65,6 @@ def make_thumbnail(screenshot_path, output_path):
     tw2 = bbox2[2] - bbox2[0]
     draw.text(((W - tw2) // 2, ty + 90), tagline, font=sub_font, fill=(180, 190, 210, 240))
 
-    # Stats
-    stats = "6 models  |  60,000 probes  |  7 days  |  zero SDKs"
-    bbox3 = draw.textbbox((0, 0), stats, font=small_font)
-    tw3 = bbox3[2] - bbox3[0]
-    draw.text(((W - tw3) // 2, ty + 128), stats, font=small_font, fill=(120, 140, 180, 210))
-
     canvas.save(output_path, optimize=True)
     print(f"Saved {output_path} ({W}x{H})")
 
