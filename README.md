@@ -1,6 +1,3 @@
-
-![tui](demo/tui-screenshot.png)
-
 # llmprobe
 
 > Probe LLM API endpoints. Measure TTFT, latency, throughput. Single binary, zero SDKs.
