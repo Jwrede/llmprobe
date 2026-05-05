@@ -25,6 +25,10 @@ func NewEngine(cfg *config.Config) *Engine {
 			providers[p.Name] = provider.NewAnthropic(p.APIKey, p.BaseURL)
 		case "google":
 			providers[p.Name] = provider.NewGoogle(p.APIKey, p.BaseURL)
+		case "azure":
+			providers[p.Name] = provider.NewAzure(p.APIKey, p.BaseURL, p.APIVersion)
+		case "bedrock":
+			providers[p.Name] = provider.NewBedrock(p.AccessKey, p.SecretKey, p.Region, p.BaseURL)
 		}
 	}
 	return &Engine{cfg: cfg, providers: providers}

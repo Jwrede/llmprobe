@@ -44,8 +44,6 @@ providers:
 Run a probe:
 
 ```
-$ export OPENAI_API_KEY=sk-...
-$ export ANTHROPIC_API_KEY=sk-ant-...
 $ llmprobe probe
 
 Provider   Model                    Status    TTFT    Latency  Tok/s  Tokens  Error
@@ -53,8 +51,10 @@ Provider   Model                    Status    TTFT    Latency  Tok/s  Tokens  Er
 openai     gpt-4o                   healthy   312ms   2100ms   68.4   42
 openai     gpt-4o-mini              healthy   98ms    814ms    112.3  56
 anthropic  claude-sonnet-4-20250514 healthy   420ms   2831ms   52.1   38
+azure      gpt-4o                   healthy   289ms   1950ms   71.2   44
+bedrock    anthropic.claude-3-5...  degraded  1820ms  4510ms   28.1   38
 
-3 healthy, 0 degraded, 0 errors
+4 healthy, 1 degraded, 0 errors
 ```
 
 ## What it measures
@@ -138,7 +138,7 @@ defaults:
   concurrency: 5                                 # max parallel probes
 
 providers:
-  - name: openai                    # openai, anthropic, or google
+  - name: openai                    # openai, anthropic, google, azure, bedrock
     api_key: ${OPENAI_API_KEY}      # env var expansion
     base_url: https://custom.api    # optional, override endpoint
     models:
@@ -149,10 +149,62 @@ providers:
           max_ttft: 2s              # alert if TTFT exceeds this
           max_latency: 10s          # alert if total latency exceeds this
           min_tokens_per_sec: 20    # alert if throughput drops below this
+
+  - name: azure
+    api_key: ${AZURE_OPENAI_API_KEY}
+    base_url: https://your-resource.openai.azure.com
+    api_version: "2024-10-21"       # optional, defaults to 2024-10-21
+    models:
+      - name: gpt-4o               # deployment name
+
+  - name: bedrock
+    access_key: ${AWS_ACCESS_KEY_ID}
+    secret_key: ${AWS_SECRET_ACCESS_KEY}
+    region: us-east-1
+    models:
+      - name: anthropic.claude-3-5-sonnet-20241022-v2:0
 ```
 
-API keys support `${ENV_VAR}` syntax. Only the `api_key` fields are expanded,
-so env var references in prompts or model names are left as-is.
+API keys and AWS credentials support `${ENV_VAR}` syntax. Only credential
+fields are expanded, so env var references in prompts or model names are
+left as-is.
+
+### OpenAI-compatible providers
+
+Many providers (Groq, Together AI, Fireworks, DeepSeek, Mistral, OpenRouter,
+Ollama, vLLM) expose an OpenAI-compatible API. These work out of the box
+by setting `base_url`:
+
+```yaml
+providers:
+  # Groq
+  - name: openai
+    api_key: ${GROQ_API_KEY}
+    base_url: https://api.groq.com/openai
+    models:
+      - name: llama-3.3-70b-versatile
+
+  # DeepSeek
+  - name: openai
+    api_key: ${DEEPSEEK_API_KEY}
+    base_url: https://api.deepseek.com
+    models:
+      - name: deepseek-chat
+
+  # Together AI
+  - name: openai
+    api_key: ${TOGETHER_API_KEY}
+    base_url: https://api.together.xyz
+    models:
+      - name: meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
+
+  # Local Ollama
+  - name: openai
+    api_key: unused
+    base_url: http://localhost:11434/v1
+    models:
+      - name: llama3.2
+```
 
 ## Architecture
 
@@ -166,19 +218,28 @@ probes.yml
 ```
 
 Each provider client is a thin HTTP wrapper that sends a streaming request
-and parses the SSE response. No LLM SDKs are imported. The SSE parser handles
-both data-only events (OpenAI, Google) and named events (Anthropic).
+and parses the response. No LLM SDKs are imported. The SSE parser handles
+both data-only events (OpenAI, Google) and named events (Anthropic). The
+Bedrock client implements SigV4 signing and AWS binary event stream parsing
+from scratch.
 
-TTFT is measured from the moment the HTTP request is sent to the first SSE
+TTFT is measured from the moment the HTTP request is sent to the first
 event that contains actual content text (not role assignments or metadata).
 
 ## Providers
 
 | Provider | Endpoint | Auth | Streaming format |
 |----------|----------|------|-----------------|
-| OpenAI | `/v1/chat/completions` | `Authorization: Bearer` | data-only SSE, `[DONE]` sentinel |
-| Anthropic | `/v1/messages` | `x-api-key` header | named-event SSE (`content_block_delta`) |
-| Google | `/v1beta/models/{model}:streamGenerateContent?alt=sse` | `key` query param | data-only SSE, stream closes |
+| OpenAI | `/v1/chat/completions` | `Authorization: Bearer` | SSE, `[DONE]` sentinel |
+| Anthropic | `/v1/messages` | `x-api-key` header | named-event SSE |
+| Google | `/v1beta/models/{model}:streamGenerateContent?alt=sse` | `key` query param | SSE |
+| Azure OpenAI | `/openai/deployments/{model}/chat/completions` | `api-key` header | SSE, `[DONE]` sentinel |
+| AWS Bedrock | `/model/{model}/converse-stream` | SigV4 | AWS binary event stream |
+| OpenAI-compat | `/v1/chat/completions` (custom base_url) | `Authorization: Bearer` | SSE |
+
+OpenAI-compatible covers: Groq, Together AI, Fireworks, DeepSeek, Mistral,
+OpenRouter, Ollama, vLLM, and any endpoint that speaks the OpenAI chat
+completions API.
 
 ## Roadmap
 
@@ -187,7 +248,6 @@ event that contains actual content text (not role assignments or metadata).
 - OpenTelemetry metric export for integration with Grafana/Datadog
 - Prometheus `/metrics` endpoint
 - Structured output validation: verify JSON mode responses parse correctly
-- More providers (Mistral, Cohere, Azure OpenAI)
 
 ## License
 

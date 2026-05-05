@@ -21,10 +21,14 @@ type Defaults struct {
 }
 
 type Provider struct {
-	Name    string  `yaml:"name"`
-	APIKey  string  `yaml:"api_key"`
-	BaseURL string  `yaml:"base_url"`
-	Models  []Model `yaml:"models"`
+	Name       string  `yaml:"name"`
+	APIKey     string  `yaml:"api_key"`
+	BaseURL    string  `yaml:"base_url"`
+	Models     []Model `yaml:"models"`
+	APIVersion string  `yaml:"api_version"`
+	Region     string  `yaml:"region"`
+	AccessKey  string  `yaml:"access_key"`
+	SecretKey  string  `yaml:"secret_key"`
 }
 
 type Model struct {
@@ -85,6 +89,8 @@ func Load(path string) (*Config, error) {
 func expandEnvInKeys(cfg *Config) {
 	for i := range cfg.Providers {
 		cfg.Providers[i].APIKey = os.ExpandEnv(cfg.Providers[i].APIKey)
+		cfg.Providers[i].AccessKey = os.ExpandEnv(cfg.Providers[i].AccessKey)
+		cfg.Providers[i].SecretKey = os.ExpandEnv(cfg.Providers[i].SecretKey)
 	}
 }
 
@@ -119,16 +125,33 @@ func validate(cfg *Config) error {
 	if len(cfg.Providers) == 0 {
 		return fmt.Errorf("config: no providers configured")
 	}
-	known := map[string]bool{"openai": true, "anthropic": true, "google": true}
+	known := map[string]bool{"openai": true, "anthropic": true, "google": true, "azure": true, "bedrock": true}
 	for _, p := range cfg.Providers {
 		if !known[p.Name] {
-			return fmt.Errorf("config: unknown provider %q (supported: openai, anthropic, google)", p.Name)
-		}
-		if p.APIKey == "" {
-			return fmt.Errorf("config: provider %q has no api_key (set the env var)", p.Name)
+			return fmt.Errorf("config: unknown provider %q (supported: openai, anthropic, google, azure, bedrock)", p.Name)
 		}
 		if len(p.Models) == 0 {
 			return fmt.Errorf("config: provider %q has no models", p.Name)
+		}
+		switch p.Name {
+		case "bedrock":
+			if p.AccessKey == "" || p.SecretKey == "" {
+				return fmt.Errorf("config: provider %q needs access_key and secret_key", p.Name)
+			}
+			if p.Region == "" {
+				return fmt.Errorf("config: provider %q needs region", p.Name)
+			}
+		case "azure":
+			if p.APIKey == "" {
+				return fmt.Errorf("config: provider %q has no api_key (set the env var)", p.Name)
+			}
+			if p.BaseURL == "" {
+				return fmt.Errorf("config: provider %q needs base_url (e.g. https://your-resource.openai.azure.com)", p.Name)
+			}
+		default:
+			if p.APIKey == "" {
+				return fmt.Errorf("config: provider %q has no api_key (set the env var)", p.Name)
+			}
 		}
 	}
 	return nil

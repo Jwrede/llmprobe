@@ -7,7 +7,7 @@ defaults:
   prompt: "Respond with exactly one sentence about the weather."
   max_tokens: 50
   timeout: 30s
-  concurrency: 3
+  concurrency: 5
 
 providers:
   - name: openai
@@ -41,3 +41,31 @@ providers:
           max_ttft: 500ms
           max_latency: 5s
           min_tokens_per_sec: 40
+
+  # Azure OpenAI (uncomment and configure)
+  # - name: azure
+  #   api_key: ${AZURE_OPENAI_API_KEY}
+  #   base_url: https://your-resource.openai.azure.com
+  #   models:
+  #     - name: gpt-4o  # deployment name
+  #       thresholds:
+  #         max_ttft: 2s
+
+  # AWS Bedrock (uncomment and configure)
+  # - name: bedrock
+  #   access_key: ${AWS_ACCESS_KEY_ID}
+  #   secret_key: ${AWS_SECRET_ACCESS_KEY}
+  #   region: us-east-1
+  #   models:
+  #     - name: anthropic.claude-3-5-sonnet-20241022-v2:0
+  #       thresholds:
+  #         max_ttft: 1s
+
+  # OpenAI-compatible providers (Groq, DeepSeek, Together, etc.)
+  # - name: openai
+  #   api_key: ${GROQ_API_KEY}
+  #   base_url: https://api.groq.com/openai
+  #   models:
+  #     - name: llama-3.3-70b-versatile
+  #       thresholds:
+  #         max_ttft: 200ms
