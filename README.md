@@ -3,7 +3,7 @@
 > Probe LLM API endpoints. Measure TTFT, latency, throughput. Single binary, zero SDKs.
 
 [![CI](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml/badge.svg)](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml)
-[![Go](https://img.shields.io/badge/go-1.24+-00ADD8?logo=go)](https://go.dev)
+[![Go](https://img.shields.io/badge/go-1.23+-00ADD8?logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 llmprobe is a CLI tool that probes LLM API endpoints and measures the metrics
