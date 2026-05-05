@@ -33,7 +33,7 @@ func ParseSSEStream(r io.Reader, onEvent func(eventType string, data []byte) err
 	var currentData []byte
 
 	for scanner.Scan() {
-		line := scanner.Text()
+		line := strings.TrimRight(scanner.Text(), "\r")
 		switch {
 		case strings.HasPrefix(line, "event: "):
 			currentEvent = strings.TrimPrefix(line, "event: ")
