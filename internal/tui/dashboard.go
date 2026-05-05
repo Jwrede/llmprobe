@@ -24,14 +24,14 @@ import (
 )
 
 var modelColors = []cell.Color{
-	cell.ColorNumber(33),
-	cell.ColorNumber(208),
-	cell.ColorNumber(40),
-	cell.ColorNumber(135),
 	cell.ColorNumber(196),
+	cell.ColorNumber(46),
+	cell.ColorNumber(33),
+	cell.ColorNumber(226),
+	cell.ColorNumber(201),
+	cell.ColorNumber(208),
 	cell.ColorNumber(51),
-	cell.ColorNumber(220),
-	cell.ColorNumber(99),
+	cell.ColorNumber(15),
 }
 
 type modelHistory struct {
@@ -167,7 +167,7 @@ func (d *Dashboard) Update(results []probe.Result) {
 	d.redraw()
 }
 
-const maxChartPoints = 200
+const maxChartPoints = 120
 
 func downsample(vals []float64, maxPoints int) []float64 {
 	if len(vals) <= maxPoints {
@@ -181,11 +181,11 @@ func downsample(vals []float64, maxPoints int) []float64 {
 			end = len(vals)
 		}
 		bucket := vals[i:end]
-		sum := 0.0
-		for _, v := range bucket {
-			sum += v
-		}
-		out = append(out, sum/float64(len(bucket)))
+		sorted := make([]float64, len(bucket))
+		copy(sorted, bucket)
+		sort.Float64s(sorted)
+		mid := len(sorted) / 2
+		out = append(out, sorted[mid])
 	}
 	return out
 }
@@ -290,7 +290,7 @@ func (d *Dashboard) Run(ctx context.Context, cancel context.CancelFunc) error {
 				container.BorderColor(cell.ColorGray),
 				container.PlaceWidget(d.stats),
 			),
-			container.SplitPercent(60),
+			container.SplitPercent(70),
 		),
 	)
 	if err != nil {
