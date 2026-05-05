@@ -109,9 +109,11 @@ func (e *Engine) runOne(t probeTask) Result {
 	r.TTFT = pr.TTFT
 	r.TotalLatency = pr.TotalLatency
 	r.TokenCount = pr.TokenCount
-	if pr.TotalLatency > pr.TTFT && pr.TokenCount > 0 {
+	if pr.TokenCount > 0 {
 		genTime := pr.TotalLatency - pr.TTFT
-		r.TokensPerSec = float64(pr.TokenCount) / genTime.Seconds()
+		if genTime > time.Millisecond {
+			r.TokensPerSec = float64(pr.TokenCount) / genTime.Seconds()
+		}
 	}
 
 	r.Status = StatusHealthy
