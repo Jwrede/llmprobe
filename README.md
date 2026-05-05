@@ -134,8 +134,8 @@ performance right now.
 
 ```yaml
 defaults:
-  prompt: "Respond with exactly one sentence."  # probe prompt
-  max_tokens: 50                                 # max output tokens
+  prompt: "Hello"                                # probe prompt
+  max_tokens: 20                                 # max output tokens
   timeout: 30s                                   # per-probe timeout
   concurrency: 5                                 # max parallel probes
 

@@ -96,10 +96,10 @@ func expandEnvInKeys(cfg *Config) {
 
 func applyDefaults(cfg *Config) {
 	if cfg.Defaults.Prompt == "" {
-		cfg.Defaults.Prompt = "Respond with exactly one sentence."
+		cfg.Defaults.Prompt = "Hello"
 	}
 	if cfg.Defaults.MaxTokens == 0 {
-		cfg.Defaults.MaxTokens = 50
+		cfg.Defaults.MaxTokens = 20
 	}
 	if cfg.Defaults.Timeout.Duration == 0 {
 		cfg.Defaults.Timeout.Duration = 30 * time.Second

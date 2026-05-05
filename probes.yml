@@ -4,8 +4,8 @@
 # Set them before running: export OPENAI_API_KEY=sk-...
 
 defaults:
-  prompt: "Respond with exactly one sentence about the weather."
-  max_tokens: 50
+  prompt: "Hello"
+  max_tokens: 20
   timeout: 30s
   concurrency: 5
 

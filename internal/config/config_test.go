@@ -87,11 +87,11 @@ providers:
 		t.Fatal(err)
 	}
 
-	if cfg.Defaults.MaxTokens != 50 {
-		t.Errorf("default max_tokens = %d, want 50", cfg.Defaults.MaxTokens)
+	if cfg.Defaults.MaxTokens != 20 {
+		t.Errorf("default max_tokens = %d, want 20", cfg.Defaults.MaxTokens)
 	}
-	if cfg.Providers[0].Models[0].MaxTokens != 50 {
-		t.Errorf("model max_tokens = %d, want 50", cfg.Providers[0].Models[0].MaxTokens)
+	if cfg.Providers[0].Models[0].MaxTokens != 20 {
+		t.Errorf("model max_tokens = %d, want 20", cfg.Providers[0].Models[0].MaxTokens)
 	}
 }
 
