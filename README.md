@@ -259,6 +259,13 @@ OpenAI-compatible covers: Groq, Together AI, Fireworks, DeepSeek, Mistral,
 OpenRouter, Ollama, vLLM, and any endpoint that speaks the OpenAI chat
 completions API.
 
+## Live benchmark
+
+[llm-bench](https://github.com/Jwrede/llm-bench) uses llmprobe to run a
+continuous public benchmark of major LLM APIs. Results are published as an
+open JSONL dataset and a live terminal dashboard at
+[bench.jonathanwrede.de](https://bench.jonathanwrede.de).
+
 ## Roadmap
 
 - Baseline tracking: store rolling percentiles, alert when current probe
