@@ -19,6 +19,12 @@ blocks deploys when your LLM provider is degraded.
 
 ## Quick start
 
+**Download a prebuilt binary** from the
+[latest release](https://github.com/Jwrede/llmprobe/releases/latest)
+(Linux, macOS, Windows; amd64 and arm64).
+
+Or install from source:
+
 ```bash
 go install github.com/Jwrede/llmprobe@latest
 ```
