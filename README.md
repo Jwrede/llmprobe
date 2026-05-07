@@ -175,12 +175,14 @@ Once registered, Claude Code can call llmprobe tools during any conversation.
 
 | Tool | Description |
 |------|-------------|
-| `probe` | Health check all configured endpoints from `probes.yml`. Returns TTFT, latency, throughput, and status for each model. Accepts an optional `config` parameter to specify a custom config path. |
-| `check_model` | Probe a single model without a config file. Requires three parameters: `provider` (openai, anthropic, google, azure, bedrock), `model` (the model identifier), and `api_key_env` (name of the environment variable holding the API key). |
+| `probe_all` | Probe all configured endpoints from `probes.yml`. Returns TTFT, latency, throughput, and health status for every model. Accepts an optional `config` parameter for a custom config path. |
+| `probe_model` | Probe a single model without a config file. Requires `provider` (openai, anthropic, google, azure, bedrock), `model` (the model identifier), and `api_key_env` (env var holding the API key). |
+| `list_providers` | List all providers and models in the config file with their thresholds. Use this to discover available models before probing. |
+| `get_config` | Return the full parsed configuration including defaults, providers, models, and thresholds. |
 
-**Example use case:** Claude Code can verify API endpoint health before
-deploying changes, ensuring your LLM providers are responsive and within
-latency thresholds.
+**Example use case:** An agent calls `list_providers` to see what models
+are configured, then `probe_all` to verify they are healthy before
+deploying changes.
 
 ## Configuration
 
