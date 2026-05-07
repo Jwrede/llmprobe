@@ -146,6 +146,39 @@ Use `llmprobe probe` as a pre-deploy gate:
 This blocks the deploy if any LLM provider is experiencing degraded
 performance right now.
 
+## MCP server
+
+llmprobe includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/)
+server, allowing Claude Code and other MCP hosts to check LLM API health
+directly from an agent workflow.
+
+### Running the server
+
+```bash
+llmprobe mcp
+```
+
+This starts the MCP server over stdio.
+
+### Registering with Claude Code
+
+```bash
+claude mcp add --transport stdio llmprobe -- llmprobe mcp
+```
+
+Once registered, Claude Code can call llmprobe tools during any conversation.
+
+### Available tools
+
+| Tool | Description |
+|------|-------------|
+| `probe` | Health check all configured endpoints from `probes.yml`. Returns TTFT, latency, throughput, and status for each model. Accepts an optional `config` parameter to specify a custom config path. |
+| `check_model` | Probe a single model without a config file. Requires three parameters: `provider` (openai, anthropic, google, azure, bedrock), `model` (the model identifier), and `api_key_env` (name of the environment variable holding the API key). |
+
+**Example use case:** Claude Code can verify API endpoint health before
+deploying changes, ensuring your LLM providers are responsive and within
+latency thresholds.
+
 ## Configuration
 
 ```yaml
