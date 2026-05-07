@@ -7,6 +7,7 @@
 [![CI](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml/badge.svg)](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/go-1.23+-00ADD8?logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![llmprobe MCP server](https://glama.ai/mcp/servers/Jwrede/llmprobe/badges/score.svg)](https://glama.ai/mcp/servers/Jwrede/llmprobe)
 
 llmprobe is a CLI tool that probes LLM API endpoints and measures the metrics
 that matter for production reliability: time to first token (TTFT), total
@@ -147,6 +148,8 @@ This blocks the deploy if any LLM provider is experiencing degraded
 performance right now.
 
 ## MCP server
+
+[![llmprobe MCP server](https://glama.ai/mcp/servers/Jwrede/llmprobe/badges/card.svg)](https://glama.ai/mcp/servers/Jwrede/llmprobe)
 
 llmprobe includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/)
 server, allowing Claude Code and other MCP hosts to check LLM API health
