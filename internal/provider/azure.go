@@ -68,7 +68,7 @@ func (a *Azure) Probe(pc ProviderContext) (Result, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Result{}, fmt.Errorf("HTTP %d from Azure OpenAI", resp.StatusCode)
+		return Result{}, httpError(resp, "Azure OpenAI")
 	}
 
 	var result Result

@@ -63,7 +63,7 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Result{}, fmt.Errorf("HTTP %d from OpenAI", resp.StatusCode)
+		return Result{}, httpError(resp, "OpenAI")
 	}
 
 	var result Result

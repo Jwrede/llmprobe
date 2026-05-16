@@ -139,3 +139,51 @@ func TestLoadNoProviders(t *testing.T) {
 		t.Fatal("expected error for no providers")
 	}
 }
+
+func TestLoadDuplicateProviderName(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "probes.yml")
+	os.WriteFile(path, []byte(`
+providers:
+  - name: openai
+    api_key: "key1"
+    models:
+      - name: gpt-4o
+  - name: openai
+    api_key: "key2"
+    base_url: "http://localhost:8080"
+    models:
+      - name: llama-3
+`), 0644)
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected error for duplicate provider name")
+	}
+}
+
+func TestLoadDuplicateResolvedWithLabel(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "probes.yml")
+	os.WriteFile(path, []byte(`
+providers:
+  - name: openai
+    api_key: "key1"
+    models:
+      - name: gpt-4o
+  - name: openai
+    label: "vllm-local"
+    api_key: "key2"
+    base_url: "http://localhost:8080"
+    models:
+      - name: llama-3
+`), 0644)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Providers[1].DisplayName() != "vllm-local" {
+		t.Errorf("display name = %q, want %q", cfg.Providers[1].DisplayName(), "vllm-local")
+	}
+}

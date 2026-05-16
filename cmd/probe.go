@@ -24,6 +24,11 @@ func init() {
 }
 
 func runProbe(cmd *cobra.Command, args []string) error {
+	validFailOn := map[string]bool{"error": true, "degraded": true, "none": true}
+	if !validFailOn[failOn] {
+		return fmt.Errorf("unknown --fail-on %q (supported: error, degraded, none)", failOn)
+	}
+
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return err

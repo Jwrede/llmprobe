@@ -61,7 +61,7 @@ func (a *Anthropic) Probe(pc ProviderContext) (Result, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Result{}, fmt.Errorf("HTTP %d from Anthropic", resp.StatusCode)
+		return Result{}, httpError(resp, "Anthropic")
 	}
 
 	var result Result

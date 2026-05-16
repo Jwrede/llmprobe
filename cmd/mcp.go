@@ -164,7 +164,7 @@ func handleListProviders(_ context.Context, _ *mcp.CallToolRequest, args listPro
 
 	var providers []providerSummary
 	for _, p := range cfg.Providers {
-		ps := providerSummary{Name: p.Name}
+		ps := providerSummary{Name: p.DisplayName()}
 		for _, m := range p.Models {
 			ms := modelSummary{Name: m.Name}
 			if m.Thresholds.MaxTTFT.Duration > 0 || m.Thresholds.MaxLatency.Duration > 0 || m.Thresholds.MinTokensPerS > 0 {
@@ -205,7 +205,7 @@ func handleGetConfig(_ context.Context, _ *mcp.CallToolRequest, args getConfigAr
 	summary := configSummary{Defaults: cfg.Defaults}
 	for _, p := range cfg.Providers {
 		summary.Providers = append(summary.Providers, providerConfig{
-			Name:       p.Name,
+			Name:       p.DisplayName(),
 			BaseURL:    p.BaseURL,
 			APIVersion: p.APIVersion,
 			Region:     p.Region,

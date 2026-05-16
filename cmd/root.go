@@ -17,6 +17,13 @@ var rootCmd = &cobra.Command{
 	Use:   "llmprobe",
 	Short: "Probe LLM API endpoints for health and performance",
 	Long:  "llmprobe measures TTFT, latency, and throughput of LLM API endpoints.\nUse it as a one-off check, a continuous monitor, or a CI gate.",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		validFormats := map[string]bool{"table": true, "json": true}
+		if !validFormats[outputFmt] {
+			return fmt.Errorf("unknown --format %q (supported: table, json)", outputFmt)
+		}
+		return nil
+	},
 }
 
 func init() {

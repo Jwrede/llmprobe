@@ -2,21 +2,33 @@
 
 # llmprobe
 
-> Probe LLM API endpoints. Measure TTFT, latency, throughput. Single binary, zero SDKs.
+> Synthetic monitoring and CI smoke tests for LLM inference endpoints. Measure TTFT, latency, throughput, and errors. Single binary, zero SDKs.
 
 [![CI](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml/badge.svg)](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/go-1.23+-00ADD8?logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![llmprobe MCP server](https://glama.ai/mcp/servers/Jwrede/llmprobe/badges/score.svg)](https://glama.ai/mcp/servers/Jwrede/llmprobe)
 
-llmprobe is a CLI tool that probes LLM API endpoints and measures the metrics
-that matter for production reliability: time to first token (TTFT), total
-latency, generation throughput (tokens/sec), and error rates.
+llmprobe is a CLI tool for LLM serving reliability. It probes hosted APIs or
+OpenAI-compatible inference servers, then reports the metrics that matter for
+production user experience: time to first token (TTFT), total latency,
+generation throughput (tokens/sec), and error rates.
 
 Use it as a one-off health check, a continuous monitor, or a CI gate that
 blocks deploys when your LLM provider is degraded.
 
 ![demo](demo/llmprobe-demo.gif)
+
+## Public benchmark
+
+[llm-bench](https://github.com/Jwrede/llm-bench) uses llmprobe to run a
+continuous public benchmark of major LLM APIs. It publishes a live dashboard at
+[bench.jonathanwrede.de](https://bench.jonathanwrede.de) and raw JSONL data in
+[Jwrede/llm-bench-data](https://github.com/Jwrede/llm-bench-data).
+
+This is the intended use case: repeated synthetic probes that make LLM latency,
+TTFT regressions, throughput drops, and provider degradation visible before
+users report them.
 
 ## Quick start
 
@@ -29,6 +41,10 @@ Or install from source:
 ```bash
 go install github.com/Jwrede/llmprobe@latest
 ```
+
+llmprobe works with OpenAI, Anthropic, Google, Azure OpenAI, AWS Bedrock, and
+OpenAI-compatible endpoints such as vLLM, Ollama, OpenRouter, Groq, Together AI,
+Fireworks, DeepSeek, and Mistral.
 
 Create a `probes.yml` (or copy the included example):
 
@@ -296,13 +312,6 @@ event that contains actual content text (not role assignments or metadata).
 OpenAI-compatible covers: Groq, Together AI, Fireworks, DeepSeek, Mistral,
 OpenRouter, Ollama, vLLM, and any endpoint that speaks the OpenAI chat
 completions API.
-
-## Live benchmark
-
-[llm-bench](https://github.com/Jwrede/llm-bench) uses llmprobe to run a
-continuous public benchmark of major LLM APIs. Results are published as an
-open JSONL dataset and a live terminal dashboard at
-[bench.jonathanwrede.de](https://bench.jonathanwrede.de).
 
 ## Roadmap
 

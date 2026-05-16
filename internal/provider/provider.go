@@ -2,7 +2,9 @@ package provider
 
 import (
 	"bufio"
+	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -23,6 +25,19 @@ type Result struct {
 	TTFT         time.Duration
 	TotalLatency time.Duration
 	TokenCount   int
+}
+
+func httpError(resp *http.Response, providerName string) error {
+	body := make([]byte, 256)
+	n, _ := resp.Body.Read(body)
+	snippet := strings.TrimSpace(string(body[:n]))
+	if snippet == "" {
+		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, providerName)
+	}
+	if len(snippet) > 200 {
+		snippet = snippet[:200]
+	}
+	return fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, providerName, snippet)
 }
 
 func ParseSSEStream(r io.Reader, onEvent func(eventType string, data []byte) error) error {

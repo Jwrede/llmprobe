@@ -2,7 +2,6 @@ package probe
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/Jwrede/llmprobe/internal/config"
@@ -18,23 +17,25 @@ type Engine struct {
 func NewEngine(cfg *config.Config) *Engine {
 	providers := make(map[string]provider.Provider)
 	for _, p := range cfg.Providers {
+		key := p.DisplayName()
 		switch p.Name {
 		case "openai":
-			providers[p.Name] = provider.NewOpenAI(p.APIKey, p.BaseURL)
+			providers[key] = provider.NewOpenAI(p.APIKey, p.BaseURL)
 		case "anthropic":
-			providers[p.Name] = provider.NewAnthropic(p.APIKey, p.BaseURL)
+			providers[key] = provider.NewAnthropic(p.APIKey, p.BaseURL)
 		case "google":
-			providers[p.Name] = provider.NewGoogle(p.APIKey, p.BaseURL)
+			providers[key] = provider.NewGoogle(p.APIKey, p.BaseURL)
 		case "azure":
-			providers[p.Name] = provider.NewAzure(p.APIKey, p.BaseURL, p.APIVersion)
+			providers[key] = provider.NewAzure(p.APIKey, p.BaseURL, p.APIVersion)
 		case "bedrock":
-			providers[p.Name] = provider.NewBedrock(p.AccessKey, p.SecretKey, p.Region, p.BaseURL)
+			providers[key] = provider.NewBedrock(p.AccessKey, p.SecretKey, p.Region, p.BaseURL)
 		}
 	}
 	return &Engine{cfg: cfg, providers: providers}
 }
 
 type probeTask struct {
+	index        int
 	providerName string
 	model        config.Model
 }
@@ -43,7 +44,11 @@ func (e *Engine) RunAll() ([]Result, error) {
 	var tasks []probeTask
 	for _, p := range e.cfg.Providers {
 		for _, m := range p.Models {
-			tasks = append(tasks, probeTask{providerName: p.Name, model: m})
+			tasks = append(tasks, probeTask{
+				index:        len(tasks),
+				providerName: p.DisplayName(),
+				model:        m,
+			})
 		}
 	}
 
@@ -51,8 +56,7 @@ func (e *Engine) RunAll() ([]Result, error) {
 		return nil, fmt.Errorf("no probe targets configured")
 	}
 
-	var mu sync.Mutex
-	results := make([]Result, 0, len(tasks))
+	results := make([]Result, len(tasks))
 
 	g := new(errgroup.Group)
 	g.SetLimit(e.cfg.Defaults.Concurrency)
@@ -60,10 +64,7 @@ func (e *Engine) RunAll() ([]Result, error) {
 	for _, task := range tasks {
 		t := task
 		g.Go(func() error {
-			r := e.runOne(t)
-			mu.Lock()
-			results = append(results, r)
-			mu.Unlock()
+			results[t.index] = e.runOne(t)
 			return nil
 		})
 	}
@@ -109,14 +110,18 @@ func (e *Engine) runOne(t probeTask) Result {
 	r.TTFT = pr.TTFT
 	r.TotalLatency = pr.TotalLatency
 	r.TokenCount = pr.TokenCount
-	if pr.TokenCount > 0 {
-		genTime := pr.TotalLatency - pr.TTFT
-		if genTime > time.Millisecond {
-			r.TokensPerSec = float64(pr.TokenCount) / genTime.Seconds()
-		}
+
+	if pr.TokenCount == 0 {
+		r.Status = StatusDegraded
+		r.Error = "received HTTP 200 but no content tokens"
+		return r
 	}
 
-	r.Status = StatusHealthy
+	genTime := pr.TotalLatency - pr.TTFT
+	if genTime > time.Millisecond {
+		r.TokensPerSec = float64(pr.TokenCount) / genTime.Seconds()
+	}
+
 	r.Status = e.applyThresholds(r, t.model.Thresholds)
 
 	return r
