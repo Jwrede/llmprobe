@@ -1,4 +1,4 @@
-llmprobe
+/llmprobe
 *.exe
 .env
 vendor/

@@ -2,7 +2,12 @@
   "name": "llmprobe",
   "version": "1.2.0",
   "description": "Synthetic monitoring for LLM inference endpoints. Measure TTFT, latency, throughput, and errors.",
+  "author": {
+    "name": "Jonathan Wrede",
+    "url": "https://github.com/Jwrede"
+  },
   "homepage": "https://github.com/Jwrede/llmprobe",
-  "author": "Jonathan Wrede",
-  "license": "MIT"
+  "repository": "https://github.com/Jwrede/llmprobe",
+  "license": "MIT",
+  "keywords": ["llm", "monitoring", "performance", "latency", "ttft", "inference"]
 }
