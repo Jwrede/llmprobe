@@ -126,6 +126,7 @@ llmprobe watch --interval 30s           # custom interval
 llmprobe watch --tui                    # live terminal dashboard with TTFT chart
 llmprobe watch --tui --load data.jsonl  # load historical data into the dashboard
 llmprobe watch -f json                  # JSONL output (one line per result)
+llmprobe watch --prometheus :9090       # expose Prometheus metrics
 ```
 
 The `--tui` flag launches a live terminal dashboard with a TTFT chart,
@@ -145,6 +146,49 @@ Watching 4 endpoints every 30s (Ctrl+C to stop)
 [14:02:32] All 4 endpoints healthy.
 ```
 
+### `llmprobe report`
+
+Generate a Markdown summary from JSONL probe data with p50/p95/p99
+percentiles for TTFT, latency, and throughput per endpoint.
+
+```bash
+llmprobe report data.jsonl
+```
+
+Output:
+
+```
+| Provider | Model | Probes | Errors | TTFT p50 | TTFT p95 | ... | Tok/s p50 | ...
+|----------|-------|--------|--------|----------|----------|-----|-----------|----
+| openai   | gpt-4o | 100  | 2      | 115ms    | 188ms    | ... | 46.9      | ...
+```
+
+### `llmprobe baseline`
+
+Create a baseline file from historical JSONL data for regression detection.
+
+```bash
+llmprobe baseline data.jsonl -o baseline.json
+```
+
+Reference the baseline in your config to use multiplier-based thresholds:
+
+```yaml
+baseline: baseline.json
+
+providers:
+  - name: openai
+    api_key: ${OPENAI_API_KEY}
+    models:
+      - name: gpt-4o
+        thresholds:
+          max_ttft_multiplier: 2.0       # fail if TTFT > 2x baseline p50
+          max_latency_multiplier: 2.5    # fail if latency > 2.5x baseline p50
+```
+
+This lets you detect regressions relative to your own historical data rather
+than setting absolute thresholds.
+
 ## CI integration
 
 Use `llmprobe probe` as a pre-deploy gate:
@@ -162,6 +206,13 @@ Use `llmprobe probe` as a pre-deploy gate:
 
 This blocks the deploy if any LLM provider is experiencing degraded
 performance right now.
+
+When a probe fails, the output shows only the failing endpoints:
+
+```
+Failed endpoints (1/4):
+  openai/gpt-4o  DEGRADED  TTFT=280ms  Latency=950ms  Tok/s=32.1
+```
 
 ## MCP server
 
@@ -245,12 +296,14 @@ left as-is.
 
 Many providers (Groq, Together AI, Fireworks, DeepSeek, Mistral, OpenRouter,
 Ollama, vLLM) expose an OpenAI-compatible API. These work out of the box
-by setting `base_url`:
+by setting `base_url`. Use the `label` field to distinguish multiple
+OpenAI-compatible blocks:
 
 ```yaml
 providers:
   # Groq
   - name: openai
+    label: groq
     api_key: ${GROQ_API_KEY}
     base_url: https://api.groq.com/openai
     models:
@@ -258,6 +311,7 @@ providers:
 
   # DeepSeek
   - name: openai
+    label: deepseek
     api_key: ${DEEPSEEK_API_KEY}
     base_url: https://api.deepseek.com
     models:
@@ -265,6 +319,7 @@ providers:
 
   # Together AI
   - name: openai
+    label: together
     api_key: ${TOGETHER_API_KEY}
     base_url: https://api.together.xyz
     models:
@@ -272,11 +327,37 @@ providers:
 
   # Local Ollama
   - name: openai
+    label: ollama
     api_key: unused
     base_url: http://localhost:11434/v1
     models:
       - name: llama3.2
 ```
+
+See [examples/](examples/) for ready-to-use configs for vLLM, SGLang, and Ollama.
+
+## Prometheus metrics
+
+Run with `--prometheus` to expose metrics for scraping:
+
+```bash
+llmprobe watch --interval 30s --prometheus :9090
+```
+
+Available metrics at `/metrics`:
+
+| Metric | Type | Labels |
+|--------|------|--------|
+| `llmprobe_ttft_seconds` | gauge | provider, model |
+| `llmprobe_latency_seconds` | gauge | provider, model |
+| `llmprobe_tokens_per_second` | gauge | provider, model |
+| `llmprobe_token_count` | gauge | provider, model |
+| `llmprobe_status` | gauge | provider, model |
+| `llmprobe_probes_total` | counter | provider, model |
+| `llmprobe_errors_total` | counter | provider, model |
+
+The `llmprobe_status` gauge encodes health as: 1 = healthy, 0.5 = degraded,
+0 = error. Use this for alerting in Grafana or Alertmanager.
 
 ## Architecture
 
@@ -315,11 +396,9 @@ completions API.
 
 ## Roadmap
 
-- Baseline tracking: store rolling percentiles, alert when current probe
-  exceeds Nx baseline
-- OpenTelemetry metric export for integration with Grafana/Datadog
-- Prometheus `/metrics` endpoint
+- OpenTelemetry metric/span export for integration with Datadog and Honeycomb
 - Structured output validation: verify JSON mode responses parse correctly
+- Histogram-based Prometheus metrics for multi-instance aggregation
 
 ## License
 
