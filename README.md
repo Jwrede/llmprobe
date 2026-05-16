@@ -30,7 +30,7 @@ This is the intended use case: repeated synthetic probes that make LLM latency,
 TTFT regressions, throughput drops, and provider degradation visible before
 users report them.
 
-## Quick start
+## Install
 
 **Download a prebuilt binary** from the
 [latest release](https://github.com/Jwrede/llmprobe/releases/latest)
@@ -41,6 +41,25 @@ Or install from source:
 ```bash
 go install github.com/Jwrede/llmprobe@latest
 ```
+
+### Claude Code plugin
+
+Install as a Claude Code plugin for `/llmprobe` skill and MCP tools:
+
+```bash
+claude plugin install Jwrede/llmprobe
+```
+
+Or register the MCP server directly:
+
+```bash
+claude mcp add --transport stdio llmprobe -- llmprobe mcp
+```
+
+llmprobe runs locally and only contacts LLM endpoints you configure.
+See [PRIVACY.md](PRIVACY.md) for details.
+
+## Quick start
 
 llmprobe works with OpenAI, Anthropic, Google, Azure OpenAI, AWS Bedrock, and
 OpenAI-compatible endpoints such as vLLM, Ollama, OpenRouter, Groq, Together AI,

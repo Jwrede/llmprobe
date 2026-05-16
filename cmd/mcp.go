@@ -33,6 +33,8 @@ type probeModelArgs struct {
 	Provider  string `json:"provider" jsonschema:"provider name (openai, anthropic, google, azure, bedrock)"`
 	Model     string `json:"model" jsonschema:"model identifier (e.g. gpt-4o, claude-sonnet-4-20250514)"`
 	APIKeyEnv string `json:"api_key_env" jsonschema:"environment variable name containing the API key"`
+	BaseURL   string `json:"base_url,omitempty" jsonschema:"optional base URL for OpenAI-compatible endpoints (e.g. http://localhost:8000)"`
+	Label     string `json:"label,omitempty" jsonschema:"optional display name for the endpoint (e.g. vllm-local)"`
 }
 
 type listProvidersArgs struct {
@@ -49,7 +51,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "llmprobe",
-			Version: "1.1.0",
+			Version: Version,
 		},
 		nil,
 	)
@@ -118,8 +120,10 @@ func handleProbeModel(_ context.Context, _ *mcp.CallToolRequest, args probeModel
 		},
 		Providers: []config.Provider{
 			{
-				Name:   args.Provider,
-				APIKey: apiKey,
+				Name:    args.Provider,
+				Label:   args.Label,
+				APIKey:  apiKey,
+				BaseURL: args.BaseURL,
 				Models: []config.Model{
 					{
 						Name:      args.Model,
