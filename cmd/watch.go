@@ -6,10 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
 	"time"
 
 	"github.com/Jwrede/llmprobe/internal/config"
+	"github.com/Jwrede/llmprobe/internal/metrics"
 	"github.com/Jwrede/llmprobe/internal/output"
 	"github.com/Jwrede/llmprobe/internal/probe"
 	"github.com/Jwrede/llmprobe/internal/tui"
@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	watchInterval time.Duration
-	useTUI        bool
-	loadPath      string
+	watchInterval  time.Duration
+	useTUI         bool
+	loadPath       string
+	prometheusAddr string
 )
 
 var watchCmd = &cobra.Command{
@@ -32,6 +33,7 @@ func init() {
 	watchCmd.Flags().DurationVar(&watchInterval, "interval", 60*time.Second, "probe interval (e.g. 30s, 5m)")
 	watchCmd.Flags().BoolVar(&useTUI, "tui", false, "show live terminal dashboard")
 	watchCmd.Flags().StringVar(&loadPath, "load", "", "load historical JSONL data into the dashboard")
+	watchCmd.Flags().StringVar(&prometheusAddr, "prometheus", "", "expose Prometheus metrics on this address (e.g. :9090)")
 	rootCmd.AddCommand(watchCmd)
 }
 
@@ -42,6 +44,14 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	}
 
 	engine := probe.NewEngine(cfg)
+
+	if prometheusAddr != "" {
+		go func() {
+			if err := metrics.ServeHTTP(prometheusAddr); err != nil {
+				fmt.Fprintf(os.Stderr, "prometheus server: %v\n", err)
+			}
+		}()
+	}
 
 	if useTUI {
 		return runWatchTUI(engine)
@@ -89,6 +99,9 @@ func runWatchTUI(engine *probe.Engine) error {
 		results, err := engine.RunAll()
 		if err == nil {
 			dash.Update(results)
+			if prometheusAddr != "" {
+				metrics.Record(results)
+			}
 		}
 
 		for {
@@ -99,6 +112,9 @@ func runWatchTUI(engine *probe.Engine) error {
 				results, err := engine.RunAll()
 				if err == nil {
 					dash.Update(results)
+					if prometheusAddr != "" {
+						metrics.Record(results)
+					}
 				}
 			}
 		}
@@ -112,6 +128,10 @@ func runIteration(engine *probe.Engine) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "probe error: %v\n", err)
 		return
+	}
+
+	if prometheusAddr != "" {
+		metrics.Record(results)
 	}
 
 	timestamp := time.Now().Format("15:04:05")
