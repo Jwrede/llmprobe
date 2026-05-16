@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Jwrede/llmprobe/internal/baseline"
 	"github.com/Jwrede/llmprobe/internal/config"
 	"github.com/Jwrede/llmprobe/internal/output"
 	"github.com/Jwrede/llmprobe/internal/probe"
@@ -34,7 +35,11 @@ func runProbe(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	engine := probe.NewEngine(cfg)
+	engine, err := buildEngine(cfg)
+	if err != nil {
+		return err
+	}
+
 	results, err := engine.RunAll()
 	if err != nil {
 		return err
@@ -53,30 +58,50 @@ func runProbe(cmd *cobra.Command, args []string) error {
 	return checkExitCondition(results)
 }
 
+func buildEngine(cfg *config.Config) (*probe.Engine, error) {
+	if cfg.BaselinePath == "" {
+		return probe.NewEngine(cfg), nil
+	}
+	bl, err := baseline.Load(cfg.BaselinePath)
+	if err != nil {
+		return nil, err
+	}
+	return probe.NewEngineWithBaseline(cfg, bl), nil
+}
+
 func checkExitCondition(results []probe.Result) error {
-	hasError := false
-	hasDegraded := false
+	var failures []probe.Result
 	for _, r := range results {
+		switch failOn {
+		case "error":
+			if r.Status == probe.StatusError {
+				failures = append(failures, r)
+			}
+		case "degraded":
+			if r.Status == probe.StatusError || r.Status == probe.StatusDegraded {
+				failures = append(failures, r)
+			}
+		}
+	}
+
+	if len(failures) == 0 {
+		return nil
+	}
+
+	fmt.Fprintf(os.Stderr, "\nFailed endpoints (%d/%d):\n", len(failures), len(results))
+	for _, r := range failures {
 		if r.Status == probe.StatusError {
-			hasError = true
-		}
-		if r.Status == probe.StatusDegraded {
-			hasDegraded = true
-		}
-	}
-
-	switch failOn {
-	case "error":
-		if hasError {
-			fmt.Fprintln(os.Stderr, "Exiting with code 1: probe errors detected")
-			os.Exit(1)
-		}
-	case "degraded":
-		if hasError || hasDegraded {
-			fmt.Fprintln(os.Stderr, "Exiting with code 1: degraded or errored probes detected")
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "  %s/%s  ERROR  %s\n", r.Provider, r.Model, r.Error)
+		} else {
+			fmt.Fprintf(os.Stderr, "  %s/%s  DEGRADED  TTFT=%dms  Latency=%dms  Tok/s=%.1f\n",
+				r.Provider, r.Model,
+				r.TTFT.Milliseconds(),
+				r.TotalLatency.Milliseconds(),
+				r.TokensPerSec,
+			)
 		}
 	}
-
+	fmt.Fprintln(os.Stderr)
+	os.Exit(1)
 	return nil
 }

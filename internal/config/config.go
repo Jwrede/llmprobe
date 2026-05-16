@@ -9,8 +9,9 @@ import (
 )
 
 type Config struct {
-	Defaults  Defaults   `yaml:"defaults"`
-	Providers []Provider `yaml:"providers"`
+	Defaults     Defaults   `yaml:"defaults"`
+	Providers    []Provider `yaml:"providers"`
+	BaselinePath string     `yaml:"baseline"`
 }
 
 type Defaults struct {
@@ -47,9 +48,11 @@ type Model struct {
 }
 
 type Thresholds struct {
-	MaxTTFT       Duration `yaml:"max_ttft"`
-	MaxLatency    Duration `yaml:"max_latency"`
-	MinTokensPerS float64  `yaml:"min_tokens_per_sec"`
+	MaxTTFT              Duration `yaml:"max_ttft"`
+	MaxLatency           Duration `yaml:"max_latency"`
+	MinTokensPerS        float64  `yaml:"min_tokens_per_sec"`
+	MaxTTFTMultiplier    float64  `yaml:"max_ttft_multiplier"`
+	MaxLatencyMultiplier float64  `yaml:"max_latency_multiplier"`
 }
 
 type Duration struct {

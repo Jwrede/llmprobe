@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Jwrede/llmprobe/internal/baseline"
 	"github.com/Jwrede/llmprobe/internal/config"
 	"github.com/Jwrede/llmprobe/internal/provider"
 	"golang.org/x/sync/errgroup"
@@ -11,10 +12,15 @@ import (
 
 type Engine struct {
 	cfg       *config.Config
+	baseline  *baseline.Baseline
 	providers map[string]provider.Provider
 }
 
 func NewEngine(cfg *config.Config) *Engine {
+	return NewEngineWithBaseline(cfg, nil)
+}
+
+func NewEngineWithBaseline(cfg *config.Config, bl *baseline.Baseline) *Engine {
 	providers := make(map[string]provider.Provider)
 	for _, p := range cfg.Providers {
 		key := p.DisplayName()
@@ -31,7 +37,7 @@ func NewEngine(cfg *config.Config) *Engine {
 			providers[key] = provider.NewBedrock(p.AccessKey, p.SecretKey, p.Region, p.BaseURL)
 		}
 	}
-	return &Engine{cfg: cfg, providers: providers}
+	return &Engine{cfg: cfg, baseline: bl, providers: providers}
 }
 
 type probeTask struct {
@@ -137,5 +143,23 @@ func (e *Engine) applyThresholds(r Result, th config.Thresholds) Status {
 	if th.MinTokensPerS > 0 && r.TokensPerSec < th.MinTokensPerS {
 		return StatusDegraded
 	}
+
+	if e.baseline != nil {
+		if ep, ok := e.baseline.Lookup(r.Provider, r.Model); ok {
+			if th.MaxTTFTMultiplier > 0 && ep.TTFTP50 > 0 {
+				limit := time.Duration(ep.TTFTP50*th.MaxTTFTMultiplier) * time.Millisecond
+				if r.TTFT > limit {
+					return StatusDegraded
+				}
+			}
+			if th.MaxLatencyMultiplier > 0 && ep.LatencyP50 > 0 {
+				limit := time.Duration(ep.LatencyP50*th.MaxLatencyMultiplier) * time.Millisecond
+				if r.TotalLatency > limit {
+					return StatusDegraded
+				}
+			}
+		}
+	}
+
 	return StatusHealthy
 }
