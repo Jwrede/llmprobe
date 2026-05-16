@@ -5,7 +5,7 @@
 > Synthetic monitoring and CI smoke tests for LLM inference endpoints. Measure TTFT, latency, throughput, and errors. Single binary, zero SDKs.
 
 [![CI](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml/badge.svg)](https://github.com/Jwrede/llmprobe/actions/workflows/ci.yml)
-[![Go](https://img.shields.io/badge/go-1.23+-00ADD8?logo=go)](https://go.dev)
+[![Go](https://img.shields.io/badge/go-1.25+-00ADD8?logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![llmprobe MCP server](https://glama.ai/mcp/servers/Jwrede/llmprobe/badges/score.svg)](https://glama.ai/mcp/servers/Jwrede/llmprobe)
 
@@ -40,6 +40,7 @@ Or install from source:
 
 ```bash
 go install github.com/Jwrede/llmprobe@latest
+llmprobe version
 ```
 
 ### Claude Code plugin
@@ -146,6 +147,7 @@ llmprobe watch --tui                    # live terminal dashboard with TTFT char
 llmprobe watch --tui --load data.jsonl  # load historical data into the dashboard
 llmprobe watch -f json                  # JSONL output (one line per result)
 llmprobe watch --prometheus :9090       # expose Prometheus metrics
+llmprobe watch --otel localhost:4317     # export OpenTelemetry metrics via OTLP/gRPC
 ```
 
 The `--tui` flag launches a live terminal dashboard with a TTFT chart,
@@ -208,6 +210,14 @@ providers:
 This lets you detect regressions relative to your own historical data rather
 than setting absolute thresholds.
 
+### `llmprobe version`
+
+Print the installed binary version.
+
+```bash
+llmprobe version
+```
+
 ## CI integration
 
 Use `llmprobe probe` as a pre-deploy gate:
@@ -262,7 +272,7 @@ Once registered, Claude Code can call llmprobe tools during any conversation.
 | Tool | Description |
 |------|-------------|
 | `probe_all` | Probe all configured endpoints from `probes.yml`. Returns TTFT, latency, throughput, and health status for every model. Accepts an optional `config` parameter for a custom config path. |
-| `probe_model` | Probe a single model without a config file. Requires `provider` (openai, anthropic, google, azure, bedrock), `model` (the model identifier), and `api_key_env` (env var holding the API key). |
+| `probe_model` | Probe a single model without a config file. Requires `provider`, `model`, and `api_key_env`. Supports optional `base_url` for OpenAI-compatible endpoints and optional `label` for display. |
 | `list_providers` | List all providers and models in the config file with their thresholds. Use this to discover available models before probing. |
 | `get_config` | Return the full parsed configuration including defaults, providers, models, and thresholds. |
 
@@ -281,16 +291,21 @@ defaults:
 
 providers:
   - name: openai                    # openai, anthropic, google, azure, bedrock
+    label: openai-prod              # optional display name; useful for multiple OpenAI-compatible endpoints
     api_key: ${OPENAI_API_KEY}      # env var expansion
     base_url: https://custom.api    # optional, override endpoint
     models:
       - name: gpt-4o
         prompt: "Say hello."        # override default prompt
         max_tokens: 10              # override default max_tokens
+        response_format: json       # optional; OpenAI-compatible JSON mode
+        validate_json: true         # optional; mark degraded if returned content is not valid JSON
         thresholds:
           max_ttft: 2s              # alert if TTFT exceeds this
           max_latency: 10s          # alert if total latency exceeds this
           min_tokens_per_sec: 20    # alert if throughput drops below this
+          max_ttft_multiplier: 2.0  # optional; compare against baseline p50
+          max_latency_multiplier: 2.5
 
   - name: azure
     api_key: ${AZURE_OPENAI_API_KEY}
@@ -348,12 +363,31 @@ providers:
   - name: openai
     label: ollama
     api_key: unused
-    base_url: http://localhost:11434/v1
+    base_url: http://localhost:11434
     models:
       - name: llama3.2
 ```
 
 See [examples/](examples/) for ready-to-use configs for vLLM, SGLang, and Ollama.
+
+### JSON response validation
+
+For OpenAI-compatible endpoints, set `response_format: json` to request JSON
+mode and `validate_json: true` to mark the probe as `degraded` if the streamed
+content is not valid JSON.
+
+```yaml
+providers:
+  - name: openai
+    label: vllm-json
+    api_key: unused
+    base_url: http://localhost:8000
+    models:
+      - name: meta-llama/Llama-3.1-8B-Instruct
+        prompt: 'Return {"ok": true} as JSON.'
+        response_format: json
+        validate_json: true
+```
 
 ## Prometheus metrics
 
@@ -374,9 +408,34 @@ Available metrics at `/metrics`:
 | `llmprobe_status` | gauge | provider, model |
 | `llmprobe_probes_total` | counter | provider, model |
 | `llmprobe_errors_total` | counter | provider, model |
+| `llmprobe_ttft_seconds_hist` | histogram | provider, model |
+| `llmprobe_latency_seconds_hist` | histogram | provider, model |
+| `llmprobe_tokens_per_second_hist` | histogram | provider, model |
 
 The `llmprobe_status` gauge encodes health as: 1 = healthy, 0.5 = degraded,
 0 = error. Use this for alerting in Grafana or Alertmanager.
+
+## OpenTelemetry metrics
+
+Run with `--otel` to export probe metrics to an OTLP/gRPC collector.
+
+```bash
+llmprobe watch --interval 30s --otel localhost:4317
+```
+
+Exported metric names:
+
+| Metric | Description |
+|--------|-------------|
+| `llmprobe.ttft.seconds` | Time to first token in seconds |
+| `llmprobe.latency.seconds` | Total request latency in seconds |
+| `llmprobe.tokens_per_second` | Generation throughput |
+| `llmprobe.token_count` | Output token count from the last probe |
+| `llmprobe.status` | 1 = healthy, 0.5 = degraded, 0 = error |
+| `llmprobe.probes.total` | Total probes executed |
+| `llmprobe.errors.total` | Total probe errors |
+
+All metrics include `provider` and `model` attributes.
 
 ## Architecture
 
@@ -415,9 +474,9 @@ completions API.
 
 ## Roadmap
 
-- OpenTelemetry metric/span export for integration with Datadog and Honeycomb
-- Structured output validation: verify JSON mode responses parse correctly
-- Histogram-based Prometheus metrics for multi-instance aggregation
+- More provider-specific examples for self-hosted OpenAI-compatible endpoints
+- More report formats for long-running monitoring windows
+- Optional runbook templates for common LLM endpoint failures
 
 ## License
 

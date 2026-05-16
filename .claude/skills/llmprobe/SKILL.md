@@ -7,6 +7,12 @@ allowed-tools: Bash Read
 
 Run llmprobe to check the health and performance of configured LLM API endpoints.
 
+## Verify install
+
+```bash
+llmprobe version
+```
+
 ## Quick probe (all configured endpoints)
 
 ```bash
@@ -26,6 +32,22 @@ providers:
       - name: gpt-4o
         thresholds:
           max_ttft: 2s
+YAML
+)
+```
+
+For local OpenAI-compatible servers such as vLLM, SGLang, or Ollama, use
+`name: openai` with `base_url` and a display `label`:
+
+```bash
+llmprobe probe -f json -c <(cat <<'YAML'
+providers:
+  - name: openai
+    label: vllm-local
+    api_key: unused
+    base_url: http://localhost:8000
+    models:
+      - name: meta-llama/Llama-3.1-8B-Instruct
 YAML
 )
 ```
@@ -58,4 +80,5 @@ This produces p50/p95/p99 percentile tables for TTFT, latency, and throughput.
 ```bash
 llmprobe watch --interval 30s -f json >> probes.jsonl
 llmprobe watch --prometheus :9090
+llmprobe watch --otel localhost:4317
 ```
