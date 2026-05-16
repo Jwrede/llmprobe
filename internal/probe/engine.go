@@ -93,10 +93,11 @@ func (e *Engine) runOne(t probeTask) Result {
 	}
 
 	pc := provider.ProviderContext{
-		Model:     t.model.Name,
-		Prompt:    t.model.Prompt,
-		MaxTokens: t.model.MaxTokens,
-		Timeout:   e.cfg.Defaults.Timeout.Duration,
+		Model:          t.model.Name,
+		Prompt:         t.model.Prompt,
+		MaxTokens:      t.model.MaxTokens,
+		Timeout:        e.cfg.Defaults.Timeout.Duration,
+		ResponseFormat: t.model.ResponseFormat,
 	}
 
 	pr, err := p.Probe(pc)
@@ -126,6 +127,14 @@ func (e *Engine) runOne(t probeTask) Result {
 	genTime := pr.TotalLatency - pr.TTFT
 	if genTime > time.Millisecond {
 		r.TokensPerSec = float64(pr.TokenCount) / genTime.Seconds()
+	}
+
+	if t.model.ValidateJSON && pr.Content != "" {
+		if err := provider.ValidateJSON(pr.Content); err != nil {
+			r.Status = StatusDegraded
+			r.Error = fmt.Sprintf("JSON validation failed: %v", err)
+			return r
+		}
 	}
 
 	r.Status = e.applyThresholds(r, t.model.Thresholds)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -40,6 +41,9 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 			{"role": "user", "content": pc.Prompt},
 		},
 	}
+	if pc.ResponseFormat == "json" {
+		body["response_format"] = map[string]string{"type": "json_object"}
+	}
 	payload, err := json.Marshal(body)
 	if err != nil {
 		return Result{}, fmt.Errorf("marshal request: %w", err)
@@ -68,6 +72,7 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 
 	var result Result
 	var ttftRecorded bool
+	var contentBuf strings.Builder
 	tokenCount := 0
 	usageTokens := 0
 
@@ -99,6 +104,7 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 				result.TTFT = time.Since(start)
 				ttftRecorded = true
 			}
+			contentBuf.WriteString(chunk.Choices[0].Delta.Content)
 			tokenCount++
 		}
 		return nil
@@ -108,6 +114,7 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 	}
 
 	result.TotalLatency = time.Since(start)
+	result.Content = contentBuf.String()
 	if usageTokens > 0 {
 		result.TokenCount = usageTokens
 	} else {

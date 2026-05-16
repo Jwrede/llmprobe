@@ -65,6 +65,33 @@ var (
 		},
 		[]string{"provider", "model"},
 	)
+
+	ttftHist = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "llmprobe_ttft_seconds_hist",
+			Help:    "Histogram of time to first token in seconds.",
+			Buckets: []float64{0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10},
+		},
+		[]string{"provider", "model"},
+	)
+
+	latencyHist = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "llmprobe_latency_seconds_hist",
+			Help:    "Histogram of total request latency in seconds.",
+			Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30},
+		},
+		[]string{"provider", "model"},
+	)
+
+	tpsHist = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "llmprobe_tokens_per_second_hist",
+			Help:    "Histogram of generation throughput in tokens per second.",
+			Buckets: []float64{5, 10, 20, 40, 60, 80, 100, 150, 200},
+		},
+		[]string{"provider", "model"},
+	)
 )
 
 func init() {
@@ -76,6 +103,9 @@ func init() {
 		probeStatus,
 		probeErrors,
 		probeCount,
+		ttftHist,
+		latencyHist,
+		tpsHist,
 	)
 }
 
@@ -103,6 +133,11 @@ func Record(results []probe.Result) {
 			latencySeconds.With(labels).Set(r.TotalLatency.Seconds())
 			tokensPerSec.With(labels).Set(r.TokensPerSec)
 			tokenCount.With(labels).Set(float64(r.TokenCount))
+			ttftHist.With(labels).Observe(r.TTFT.Seconds())
+			latencyHist.With(labels).Observe(r.TotalLatency.Seconds())
+			if r.TokensPerSec > 0 {
+				tpsHist.With(labels).Observe(r.TokensPerSec)
+			}
 		}
 	}
 }

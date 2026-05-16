@@ -41,10 +41,12 @@ func (p Provider) DisplayName() string {
 }
 
 type Model struct {
-	Name       string     `yaml:"name"`
-	Prompt     string     `yaml:"prompt"`
-	MaxTokens  int        `yaml:"max_tokens"`
-	Thresholds Thresholds `yaml:"thresholds"`
+	Name           string     `yaml:"name"`
+	Prompt         string     `yaml:"prompt"`
+	MaxTokens      int        `yaml:"max_tokens"`
+	ResponseFormat string     `yaml:"response_format"`
+	ValidateJSON   bool       `yaml:"validate_json"`
+	Thresholds     Thresholds `yaml:"thresholds"`
 }
 
 type Thresholds struct {

@@ -15,16 +15,18 @@ type Provider interface {
 }
 
 type ProviderContext struct {
-	Model     string
-	Prompt    string
-	MaxTokens int
-	Timeout   time.Duration
+	Model          string
+	Prompt         string
+	MaxTokens      int
+	Timeout        time.Duration
+	ResponseFormat string
 }
 
 type Result struct {
 	TTFT         time.Duration
 	TotalLatency time.Duration
 	TokenCount   int
+	Content      string
 }
 
 func httpError(resp *http.Response, providerName string) error {

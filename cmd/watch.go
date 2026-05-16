@@ -21,6 +21,7 @@ var (
 	useTUI         bool
 	loadPath       string
 	prometheusAddr string
+	otelEndpoint   string
 )
 
 var watchCmd = &cobra.Command{
@@ -34,8 +35,11 @@ func init() {
 	watchCmd.Flags().BoolVar(&useTUI, "tui", false, "show live terminal dashboard")
 	watchCmd.Flags().StringVar(&loadPath, "load", "", "load historical JSONL data into the dashboard")
 	watchCmd.Flags().StringVar(&prometheusAddr, "prometheus", "", "expose Prometheus metrics on this address (e.g. :9090)")
+	watchCmd.Flags().StringVar(&otelEndpoint, "otel", "", "send OpenTelemetry metrics to this gRPC endpoint (e.g. localhost:4317)")
 	rootCmd.AddCommand(watchCmd)
 }
+
+var otel *metrics.OTelExporter
 
 func runWatch(cmd *cobra.Command, args []string) error {
 	cfg, err := config.Load(configPath)
@@ -51,6 +55,17 @@ func runWatch(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(os.Stderr, "prometheus server: %v\n", err)
 			}
 		}()
+	}
+
+	if otelEndpoint != "" {
+		ctx := context.Background()
+		var otelErr error
+		otel, otelErr = metrics.NewOTelExporter(ctx, otelEndpoint)
+		if otelErr != nil {
+			return fmt.Errorf("otel setup: %w", otelErr)
+		}
+		defer otel.Shutdown(ctx)
+		fmt.Printf("OpenTelemetry metrics exporting to %s\n", otelEndpoint)
 	}
 
 	if useTUI {
@@ -102,6 +117,9 @@ func runWatchTUI(engine *probe.Engine) error {
 			if prometheusAddr != "" {
 				metrics.Record(results)
 			}
+			if otel != nil {
+				otel.Record(ctx, results)
+			}
 		}
 
 		for {
@@ -114,6 +132,9 @@ func runWatchTUI(engine *probe.Engine) error {
 					dash.Update(results)
 					if prometheusAddr != "" {
 						metrics.Record(results)
+					}
+					if otel != nil {
+						otel.Record(ctx, results)
 					}
 				}
 			}
@@ -132,6 +153,9 @@ func runIteration(engine *probe.Engine) {
 
 	if prometheusAddr != "" {
 		metrics.Record(results)
+	}
+	if otel != nil {
+		otel.Record(context.Background(), results)
 	}
 
 	timestamp := time.Now().Format("15:04:05")
