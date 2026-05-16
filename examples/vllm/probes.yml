@@ -1,0 +1,17 @@
+defaults:
+  prompt: "Explain quicksort in one sentence."
+  max_tokens: 50
+  timeout: 30s
+  concurrency: 2
+
+providers:
+  - name: openai
+    label: vllm
+    api_key: ${VLLM_API_KEY}
+    base_url: "http://localhost:8000"
+    models:
+      - name: meta-llama/Llama-3.1-8B-Instruct
+        thresholds:
+          max_ttft: 500ms
+          max_latency: 5s
+          min_tokens_per_sec: 30

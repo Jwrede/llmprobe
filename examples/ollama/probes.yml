@@ -1,0 +1,20 @@
+defaults:
+  prompt: "Hello"
+  max_tokens: 20
+  timeout: 60s
+  concurrency: 1
+
+providers:
+  - name: openai
+    label: ollama
+    api_key: "ollama"
+    base_url: "http://localhost:11434"
+    models:
+      - name: llama3.1
+        thresholds:
+          max_ttft: 2s
+          max_latency: 10s
+      - name: mistral
+        thresholds:
+          max_ttft: 2s
+          max_latency: 10s

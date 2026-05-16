@@ -1,0 +1,17 @@
+defaults:
+  prompt: "What is the capital of France?"
+  max_tokens: 30
+  timeout: 30s
+  concurrency: 2
+
+providers:
+  - name: openai
+    label: sglang
+    api_key: ${SGLANG_API_KEY}
+    base_url: "http://localhost:30000"
+    models:
+      - name: meta-llama/Llama-3.1-8B-Instruct
+        thresholds:
+          max_ttft: 300ms
+          max_latency: 3s
+          min_tokens_per_sec: 40
