@@ -85,7 +85,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 		defer cancel()
 	}
 
-	fmt.Printf("Watching %d endpoints every %s (Ctrl+C to stop)\n\n", countEndpoints(cfg), watchInterval)
+	fmt.Fprintf(os.Stderr, "Watching %d endpoints every %s (Ctrl+C to stop)\n\n", countEndpoints(cfg), watchInterval)
 
 	ticker := time.NewTicker(watchInterval)
 	defer ticker.Stop()
@@ -100,7 +100,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 		}
 		select {
 		case <-ctx.Done():
-			fmt.Println("\nShutting down.")
+			fmt.Fprintln(os.Stderr, "\nShutting down.")
 			return nil
 		case <-ticker.C:
 			runIteration(engine)
