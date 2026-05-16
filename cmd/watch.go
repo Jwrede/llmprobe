@@ -18,6 +18,8 @@ import (
 
 var (
 	watchInterval  time.Duration
+	watchDuration  time.Duration
+	watchCount     int
 	useTUI         bool
 	loadPath       string
 	prometheusAddr string
@@ -32,6 +34,8 @@ var watchCmd = &cobra.Command{
 
 func init() {
 	watchCmd.Flags().DurationVar(&watchInterval, "interval", 60*time.Second, "probe interval (e.g. 30s, 5m)")
+	watchCmd.Flags().DurationVar(&watchDuration, "duration", 0, "stop after this duration (e.g. 30s, 5m); 0 means run forever")
+	watchCmd.Flags().IntVar(&watchCount, "count", 0, "stop after this many probe cycles; 0 means run forever")
 	watchCmd.Flags().BoolVar(&useTUI, "tui", false, "show live terminal dashboard")
 	watchCmd.Flags().StringVar(&loadPath, "load", "", "load historical JSONL data into the dashboard")
 	watchCmd.Flags().StringVar(&prometheusAddr, "prometheus", "", "expose Prometheus metrics on this address (e.g. :9090)")
@@ -75,20 +79,32 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	if watchDuration > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, watchDuration)
+		defer cancel()
+	}
+
 	fmt.Printf("Watching %d endpoints every %s (Ctrl+C to stop)\n\n", countEndpoints(cfg), watchInterval)
 
 	ticker := time.NewTicker(watchInterval)
 	defer ticker.Stop()
 
+	iterations := 0
 	runIteration(engine)
+	iterations++
 
 	for {
+		if watchCount > 0 && iterations >= watchCount {
+			return nil
+		}
 		select {
 		case <-ctx.Done():
 			fmt.Println("\nShutting down.")
 			return nil
 		case <-ticker.C:
 			runIteration(engine)
+			iterations++
 		}
 	}
 }
@@ -107,9 +123,17 @@ func runWatchTUI(engine *probe.Engine) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	if watchDuration > 0 {
+		var timeoutCancel context.CancelFunc
+		ctx, timeoutCancel = context.WithTimeout(ctx, watchDuration)
+		defer timeoutCancel()
+	}
+
 	go func() {
 		ticker := time.NewTicker(watchInterval)
 		defer ticker.Stop()
+
+		iterations := 0
 
 		results, err := engine.RunAll()
 		if err == nil {
@@ -121,8 +145,13 @@ func runWatchTUI(engine *probe.Engine) error {
 				otel.Record(ctx, results)
 			}
 		}
+		iterations++
 
 		for {
+			if watchCount > 0 && iterations >= watchCount {
+				cancel()
+				return
+			}
 			select {
 			case <-ctx.Done():
 				return
@@ -137,6 +166,7 @@ func runWatchTUI(engine *probe.Engine) error {
 						otel.Record(ctx, results)
 					}
 				}
+				iterations++
 			}
 		}
 	}()

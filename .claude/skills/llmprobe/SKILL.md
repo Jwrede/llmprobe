@@ -82,3 +82,10 @@ llmprobe watch --interval 30s -f json >> probes.jsonl
 llmprobe watch --prometheus :9090
 llmprobe watch --otel localhost:4317
 ```
+
+## Bounded watch (for scripting)
+
+```bash
+llmprobe watch --interval 5s --duration 60s -f json > probes.jsonl
+llmprobe watch --interval 5s --count 10 -f json > probes.jsonl
+```
