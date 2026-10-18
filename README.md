@@ -322,6 +322,12 @@ providers:
       - name: anthropic.claude-3-5-sonnet-20241022-v2:0
 ```
 
+Reasoning models (for example gpt-oss, o-series, DeepSeek R1) spend output tokens on hidden reasoning
+before the visible answer. With the default `max_tokens: 20` the budget can run out before any
+visible text arrives. llmprobe counts only visible content tokens for OpenAI-compatible endpoints,
+so such a probe reports `degraded` with a hint to raise `max_tokens`. For reasoning models, set
+`max_tokens` to about 256 per model.
+
 API keys and AWS credentials support `${ENV_VAR}` syntax. Only credential
 fields are expanded, so env var references in prompts or model names are
 left as-is.

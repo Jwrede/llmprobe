@@ -27,6 +27,7 @@ type Result struct {
 	TotalLatency time.Duration
 	TokenCount   int
 	Content      string
+	FinishReason string
 }
 
 func httpError(resp *http.Response, providerName string) error {

@@ -86,6 +86,7 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 				Delta struct {
 					Content string `json:"content"`
 				} `json:"delta"`
+				FinishReason string `json:"finish_reason"`
 			} `json:"choices"`
 			Usage *struct {
 				CompletionTokens int `json:"completion_tokens"`
@@ -97,6 +98,10 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 
 		if chunk.Usage != nil && chunk.Usage.CompletionTokens > 0 {
 			usageTokens = chunk.Usage.CompletionTokens
+		}
+
+		if len(chunk.Choices) > 0 && chunk.Choices[0].FinishReason != "" {
+			result.FinishReason = chunk.Choices[0].FinishReason
 		}
 
 		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
@@ -115,7 +120,12 @@ func (o *OpenAI) Probe(pc ProviderContext) (Result, error) {
 
 	result.TotalLatency = time.Since(start)
 	result.Content = contentBuf.String()
-	if usageTokens > 0 {
+	// Usage counts reasoning tokens too, so it only applies when visible
+	// content arrived. Otherwise a reasoning model that spent the whole
+	// budget on hidden reasoning would look like a successful reply.
+	if result.Content == "" {
+		result.TokenCount = 0
+	} else if usageTokens > 0 {
 		result.TokenCount = usageTokens
 	} else {
 		result.TokenCount = tokenCount
