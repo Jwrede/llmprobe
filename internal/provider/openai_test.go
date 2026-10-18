@@ -89,3 +89,42 @@ func TestOpenAIProbeTimeout(t *testing.T) {
 		t.Fatal("expected timeout error")
 	}
 }
+
+func TestOpenAIProbeReasoningOnly(t *testing.T) {
+	chunks := []string{
+		`{"choices":[{"delta":{"role":"assistant"}}]}`,
+		`{"choices":[{"delta":{"reasoning_content":"The user wants"}}]}`,
+		`{"choices":[{"delta":{"reasoning_content":" a greeting"},"finish_reason":"length"}]}`,
+		`{"choices":[],"usage":{"completion_tokens":20}}`,
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher := w.(http.Flusher)
+		for _, c := range chunks {
+			fmt.Fprintf(w, "data: %s\n\n", c)
+			flusher.Flush()
+		}
+		fmt.Fprint(w, "data: [DONE]\n\n")
+		flusher.Flush()
+	}))
+	defer server.Close()
+
+	client := NewOpenAI("test-key", server.URL)
+	result, err := client.Probe(ProviderContext{
+		Model:     "gpt-oss-20b",
+		Prompt:    "Hello",
+		MaxTokens: 20,
+		Timeout:   5 * time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.TokenCount != 0 {
+		t.Errorf("token count = %d, want 0 (no visible content)", result.TokenCount)
+	}
+	if result.FinishReason != "length" {
+		t.Errorf("finish reason = %q, want length", result.FinishReason)
+	}
+}

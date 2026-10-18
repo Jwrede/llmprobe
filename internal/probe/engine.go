@@ -121,6 +121,10 @@ func (e *Engine) runOne(t probeTask) Result {
 	if pr.TokenCount == 0 {
 		r.Status = StatusDegraded
 		r.Error = "received HTTP 200 but no content tokens"
+		if pr.FinishReason == "length" {
+			r.Error = fmt.Sprintf("no content tokens before max_tokens=%d was reached; "+
+				"reasoning models can spend the whole budget on hidden reasoning, raise max_tokens", t.model.MaxTokens)
+		}
 		return r
 	}
 
